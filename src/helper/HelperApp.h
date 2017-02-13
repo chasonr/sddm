@@ -18,8 +18,10 @@
  *
  */
 
-#ifndef Auth_H
-#define Auth_H
+#ifndef HELPERAPP_H
+#define HELPERAPP_H
+
+#define SDDM_BACKEND
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QProcessEnvironment>
@@ -43,7 +45,7 @@ namespace SDDM {
         const QString &cookie() const;
 
     public slots:
-        Request request(const Request &request);
+        Request request(const Request &request, bool &cancel);
         void info(const QString &message, Auth::Info type);
         void error(const QString &message, Auth::Error type);
         QProcessEnvironment authenticated(const QString &user);
@@ -53,7 +55,6 @@ namespace SDDM {
     private slots:
         void setUp();
         void doAuth();
-
         void sessionFinished(int status);
 
     private:
@@ -68,4 +69,4 @@ namespace SDDM {
     };
 }
 
-#endif // Auth_H
+#endif // HELPERAPP_H

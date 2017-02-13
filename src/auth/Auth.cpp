@@ -57,6 +57,7 @@ namespace SDDM {
         void dataPending();
         void childExited(int exitCode, QProcess::ExitStatus exitStatus);
         void childError(QProcess::ProcessError error);
+        void cancelPamConv();
         void requestFinished();
     public:
         AuthRequest *request { nullptr };
@@ -135,6 +136,7 @@ namespace SDDM {
         child->setProcessEnvironment(env);
         connect(child, QOverload<int,QProcess::ExitStatus>::of(&QProcess::finished), this, &Auth::Private::childExited);
         connect(child, QOverload<QProcess::ProcessError>::of(&QProcess::error), this, &Auth::Private::childError);
+        connect(request, &AuthRequest::canceled, this, &Auth::Private::cancelPamConv);
         connect(request, &AuthRequest::finished, this, &Auth::Private::requestFinished);
         connect(request, &AuthRequest::promptsChanged, parent, &Auth::requestChanged);
     }
@@ -150,6 +152,7 @@ namespace SDDM {
         connect(socket, &QLocalSocket::readyRead, this, &Auth::Private::dataPending);
     }
 
+    // from (PAM) Backend to daemon
     void Auth::Private::dataPending() {
         Auth *auth = qobject_cast<Auth*>(parent());
         Msg m = MSG_UNKNOWN;
@@ -171,10 +174,12 @@ namespace SDDM {
                 Q_EMIT auth->info(message, type);
                 break;
             }
+            // request from (PAM) Backend
             case REQUEST: {
                 Request r;
                 str >> r;
                 request->setRequest(&r);
+                qDebug() << "Auth: Request received";
                 break;
             }
             case AUTHENTICATED: {
@@ -239,6 +244,16 @@ namespace SDDM {
         Q_EMIT qobject_cast<Auth*>(parent())->error(child->errorString(), ERROR_INTERNAL);
     }
 
+    // from daemon to (PAM) backend
+    void Auth::Private::cancelPamConv() {
+        SafeDataStream str(socket);
+        qDebug() << "Auth: cancelPamConv, send CANCEL to backend";
+        str << CANCEL;
+        str.send();
+        request->setRequest();
+    }
+
+    // from daemon to (PAM) backend
     void Auth::Private::requestFinished() {
         SafeDataStream str(socket);
         Request r = request->request();
@@ -246,7 +261,6 @@ namespace SDDM {
         str.send();
         request->setRequest();
     }
-
 
     Auth::Auth(const QString &user, const QString &session, bool autologin, QObject *parent, bool verbose)
             : QObject(parent)
