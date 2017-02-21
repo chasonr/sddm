@@ -157,70 +157,73 @@ namespace SDDM {
         Auth *auth = qobject_cast<Auth*>(parent());
         Msg m = MSG_UNKNOWN;
         SafeDataStream str(socket);
-        str.receive();
-        str >> m;
-        switch (m) {
-            case ERROR: {
-                QString message;
-                Error type = ERROR_NONE;
-                str >> message >> type;
-                Q_EMIT auth->error(message, type);
-                break;
-            }
-            case INFO: {
-                QString message;
-                Info type = INFO_NONE;
-                str >> message >> type;
-                Q_EMIT auth->info(message, type);
-                break;
-            }
-            // request from (PAM) Backend
-            case REQUEST: {
-                Request r;
-                str >> r;
-                request->setRequest(&r);
-                qDebug() << "Auth: Request received";
-                break;
-            }
-            case AUTHENTICATED: {
-                QString user;
-                str >> user;
-                if (!user.isEmpty()) {
-                    auth->setUser(user);
-                    Q_EMIT auth->authentication(user, true);
+        do {
+            str.receive();
+            str >> m;
+            switch (m) {
+                case ERROR: {
+                    QString message;
+                    Error type = ERROR_NONE;
+                    str >> message >> type;
+                    Q_EMIT auth->error(message, type);
+                    break;
+                }
+                case INFO: {
+                    QString message;
+                    Info type = INFO_NONE;
+                    str >> message >> type;
+                    Q_EMIT auth->info(message, type);
+                    break;
+                }
+                // request from (PAM) Backend
+                case REQUEST: {
+                    Request r;
+                    str >> r;
+                    request->setRequest(&r);
+                    qDebug() << "Auth: Request received";
+                    break;
+                }
+                case AUTHENTICATED: {
+                    QString user;
+                    str >> user;
+                    if (!user.isEmpty()) {
+                        auth->setUser(user);
+                        Q_EMIT auth->authentication(user, true);
+                        str.reset();
+                        str << AUTHENTICATED << environment << cookie;
+                        str.send();
+                    }
+                    else {
+                        Q_EMIT auth->authentication(user, false);
+                    }
+                    break;
+                }
+                case SESSION_STATUS: {
+                    bool status;
+                    qint64 pid; //not pid_t as we need to define the wire type
+                    str >> status >> pid;
+                    sessionPid = pid;
+                    Q_EMIT auth->sessionStarted(status, pid);
                     str.reset();
-                    str << AUTHENTICATED << environment << cookie;
+                    str << SESSION_STATUS;
                     str.send();
+                    break;
                 }
-                else {
-                    Q_EMIT auth->authentication(user, false);
+            case DISPLAY_SERVER_STARTED: {
+                    QString displayName;
+                    str >> displayName;
+                    Q_EMIT auth->displayServerReady(displayName);
+                    str.reset();
+                    str << DISPLAY_SERVER_STARTED;
+                    str.send();
+                    break;
                 }
-                break;
+                default: {
+                    qWarning("Auth: dataPending:  Unknown message received: %d", m);
+                    Q_EMIT auth->error(QStringLiteral("Auth: Unexpected value received: %1").arg(m), ERROR_INTERNAL);
+                }
             }
-            case SESSION_STATUS: {
-                bool status;
-                qint64 pid; //not pid_t as we need to define the wire type
-                str >> status >> pid;
-                sessionPid = pid;
-                Q_EMIT auth->sessionStarted(status, pid);
-                str.reset();
-                str << SESSION_STATUS;
-                str.send();
-                break;
-            }
-        case DISPLAY_SERVER_STARTED: {
-                QString displayName;
-                str >> displayName;
-                Q_EMIT auth->displayServerReady(displayName);
-                str.reset();
-                str << DISPLAY_SERVER_STARTED;
-                str.send();
-                break;
-            }
-            default: {
-                Q_EMIT auth->error(QStringLiteral("Auth: Unexpected value received: %1").arg(m), ERROR_INTERNAL);
-            }
-        }
+        } while(str.available());
     }
 
     void Auth::Private::childExited(int exitCode, QProcess::ExitStatus exitStatus) {
