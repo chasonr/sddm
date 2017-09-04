@@ -235,6 +235,8 @@ namespace SDDM {
             if (!m_process->waitForFinished(5000))
                 m_process->kill();
         }
+
+        emit stopped();
     }
 
     void Greeter::finished() {
@@ -253,6 +255,8 @@ namespace SDDM {
             m_process->deleteLater();
             m_process = nullptr;
         }
+
+        emit stopped();
     }
 
     void Greeter::onRequestChanged() {
@@ -288,6 +292,8 @@ namespace SDDM {
         // clean up
         m_auth->deleteLater();
         m_auth = nullptr;
+
+        emit stopped();
     }
 
     void Greeter::onReadyReadStandardError()
