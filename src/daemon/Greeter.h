@@ -58,11 +58,11 @@ namespace SDDM {
         void onRequestChanged();
         void onSessionStarted(bool success);
         void onDisplayServerReady(const QString &displayName);
-        void onHelperFinished(Auth::HelperExitStatus status);
+        void onHelperFinished(AuthEnums::HelperExitStatus status);
         void onReadyReadStandardOutput();
         void onReadyReadStandardError();
-        void authInfo(const QString &message, Auth::Info info);
-        void authError(const QString &message, Auth::Error error);
+        void authInfo(const QString &message, AuthEnums::Info info, int result);
+        void authError(const QString &message, AuthEnums::Error error, int result);
 
     private:
         bool m_started { false };

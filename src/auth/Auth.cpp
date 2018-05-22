@@ -20,8 +20,10 @@
 
 #include "Auth.h"
 #include "Constants.h"
+#include "Configuration.h"
 #include "AuthMessages.h"
 #include "SafeDataStream.h"
+#include "Utils.h"
 
 #include <QtCore/QProcess>
 #include <QtCore/QUuid>
@@ -117,22 +119,8 @@ namespace SDDM {
             , id(lastId++) {
         SocketServer::instance()->helpers[id] = this;
         QProcessEnvironment env = child->processEnvironment();
-        bool langEmpty = true;
-        QFile localeFile(QStringLiteral("/etc/locale.conf"));
-        if (localeFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&localeFile);
-            while (!in.atEnd()) {
-                QStringList parts = in.readLine().split(QLatin1Char('='));
-                if (parts.size() >= 2) {
-                    env.insert(parts[0], parts[1]);
-                    if (parts[0] == QLatin1String("LANG"))
-                        langEmpty = false;
-                }
-            }
-            localeFile.close();
-        }
-        if (langEmpty)
-            env.insert(QStringLiteral("LANG"), QStringLiteral("C"));
+        // read locale settings from distro specific file, default /etc/locale.conf
+        Utils::readLocaleFile(env, mainConfig.LocaleFile.get());
         child->setProcessEnvironment(env);
         connect(child, QOverload<int,QProcess::ExitStatus>::of(&QProcess::finished), this, &Auth::Private::childExited);
         connect(child, QOverload<QProcess::ProcessError>::of(&QProcess::error), this, &Auth::Private::childError);
@@ -162,17 +150,19 @@ namespace SDDM {
             str >> m;
             switch (m) {
                 case ERROR: {
+                    int result;
                     QString message;
-                    Error type = ERROR_NONE;
-                    str >> message >> type;
-                    Q_EMIT auth->error(message, type);
+                    AuthEnums::Error type = AuthEnums::ERROR_NONE;
+                    str >> message >> type >> result;
+                    Q_EMIT auth->error(message, type, result);
                     break;
                 }
                 case INFO: {
+                    int result;
                     QString message;
-                    Info type = INFO_NONE;
-                    str >> message >> type;
-                    Q_EMIT auth->info(message, type);
+                    AuthEnums::Info type = AuthEnums::INFO_NONE;
+                    str >> message >> type >> result;
+                    Q_EMIT auth->info(message, type, result);
                     break;
                 }
                 // request from (PAM) Backend
@@ -220,7 +210,7 @@ namespace SDDM {
                 }
                 default: {
                     qWarning("Auth: dataPending:  Unknown message received: %d", m);
-                    Q_EMIT auth->error(QStringLiteral("Auth: Unexpected value received: %1").arg(m), ERROR_INTERNAL);
+                    Q_EMIT auth->error(QStringLiteral("Auth: Unexpected value received: %1").arg(m), AuthEnums::ERROR_INTERNAL, 0);
                 }
             }
         } while(str.available());
@@ -231,20 +221,20 @@ namespace SDDM {
             qWarning("Auth: sddm-helper (%s) crashed (exit code %d)",
                      qPrintable(child->arguments().join(QLatin1Char(' '))),
                      HelperExitStatus(exitStatus));
-            Q_EMIT qobject_cast<Auth*>(parent())->error(child->errorString(), ERROR_INTERNAL);
+            Q_EMIT qobject_cast<Auth*>(parent())->error(child->errorString(), AuthEnums::ERROR_INTERNAL, 0);
         }
 
-        if (exitCode == HELPER_SUCCESS)
+        if (exitCode == AuthEnums::HELPER_SUCCESS)
             qDebug() << "Auth: sddm-helper exited successfully";
         else
             qWarning("Auth: sddm-helper exited with %d", exitCode);
 
-        Q_EMIT qobject_cast<Auth*>(parent())->finished((Auth::HelperExitStatus)exitCode);
+        Q_EMIT qobject_cast<Auth*>(parent())->finished((AuthEnums::HelperExitStatus)exitCode);
     }
 
     void Auth::Private::childError(QProcess::ProcessError error) {
         Q_UNUSED(error);
-        Q_EMIT qobject_cast<Auth*>(parent())->error(child->errorString(), ERROR_INTERNAL);
+        Q_EMIT qobject_cast<Auth*>(parent())->error(child->errorString(), AuthEnums::ERROR_INTERNAL, 0);
     }
 
     // from daemon to (PAM) backend

@@ -77,9 +77,9 @@ namespace SDDM {
     signals:
         void stopped();
 
-        void loginFailed(QLocalSocket *socket, const QString &message);
         void loginSucceeded(QLocalSocket *socket);
-        void pamConvMsg(QLocalSocket *socket, const QString &message);
+        void loginFailed(QLocalSocket *socket, const QString &message, int result);
+        void pamConvMsg(QLocalSocket *socket, const QString &message, int result);
         void pamRequest(QLocalSocket *socket, const AuthRequest * const request);
 
     private:
@@ -132,9 +132,9 @@ namespace SDDM {
         void slotRequestChanged();
         void slotAuthenticationFinished(const QString &user, bool success);
         void slotSessionStarted(bool success, qint64 pid);
-        void slotHelperFinished(Auth::HelperExitStatus status);
-        void slotAuthInfo(const QString &message, Auth::Info info);
-        void slotAuthError(const QString &message, Auth::Error error);
+        void slotHelperFinished(AuthEnums::HelperExitStatus status);
+        void slotAuthInfo(const QString &message, AuthEnums::Info info, int result);
+        void slotAuthError(const QString &message, AuthEnums::Error error, int result);
         void slotGreeterStopped();
     };
 }
