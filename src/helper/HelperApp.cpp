@@ -30,6 +30,8 @@
 
 #include "Utils.h"
 
+#include "Utils.h"
+
 #include <QtCore/QTimer>
 #include <QtCore/QFile>
 #include <QtCore/QDebug>
@@ -165,7 +167,7 @@ namespace SDDM {
             m_session->setProcessEnvironment(env);
 
             if (!m_backend->openSession()) {
-                sessionOpened(false, -1);
+                sessionOpened(false);
                 exit(AuthEnums::HELPER_SESSION_ERROR);
                 return;
             }
