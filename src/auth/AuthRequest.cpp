@@ -117,7 +117,7 @@ namespace SDDM {
     }
 
     QString AuthRequest::findChangePwdMessage() {
-        Q_FOREACH(const AuthPrompt* qap, d->prompts) {
+        for(const AuthPrompt* qap : d->prompts) {
             if(qap->type()==AuthPrompt::CHANGE_PASSWORD)
                 return qap->message();
         }
@@ -125,7 +125,7 @@ namespace SDDM {
     }
 
     AuthPrompt *AuthRequest::findPrompt(AuthPrompt::Type type) const {
-        Q_FOREACH(AuthPrompt* qap, d->prompts) {
+        for(AuthPrompt* qap : d->prompts) {
             if(qap->type()==type)
                 return qap;
         }

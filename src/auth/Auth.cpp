@@ -220,7 +220,7 @@ namespace SDDM {
         if (exitStatus != QProcess::NormalExit) {
             qWarning("Auth: sddm-helper (%s) crashed (exit code %d)",
                      qPrintable(child->arguments().join(QLatin1Char(' '))),
-                     HelperExitStatus(exitStatus));
+                     AuthEnums::HelperExitStatus(exitStatus));
             Q_EMIT qobject_cast<Auth*>(parent())->error(child->errorString(), AuthEnums::ERROR_INTERNAL, 0);
         }
 

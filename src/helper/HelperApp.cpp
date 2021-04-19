@@ -167,7 +167,7 @@ namespace SDDM {
             m_session->setProcessEnvironment(env);
 
             if (!m_backend->openSession()) {
-                sessionOpened(false);
+                sessionOpened(false, -1);
                 exit(AuthEnums::HELPER_SESSION_ERROR);
                 return;
             }
